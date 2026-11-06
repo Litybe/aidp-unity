@@ -1,0 +1,14 @@
+{
+  "name": "Aidp.Playtest.Runtime",
+  "rootNamespace": "Aidp.Playtest",
+  "references": [ "Unity.InputSystem" ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [ "Newtonsoft.Json.dll" ],
+  "autoReferenced": true,
+  "defineConstraints": [ "UNITY_EDITOR || DEVELOPMENT_BUILD" ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

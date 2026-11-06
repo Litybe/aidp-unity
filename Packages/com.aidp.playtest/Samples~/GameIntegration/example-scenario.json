@@ -1,0 +1,8 @@
+{
+  "id": "example-teleport-right",
+  "scene": "",
+  "timeoutMs": 10000,
+  "setup": [ { "cmd": "teleport", "x": 0, "y": 0 } ],
+  "steps": [ { "hold": "rightArrow", "ms": 500 }, { "wait": 100 } ],
+  "assert": [ "player.x > 0" ]
+}

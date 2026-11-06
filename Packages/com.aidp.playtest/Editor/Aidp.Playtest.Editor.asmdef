@@ -1,0 +1,14 @@
+{
+  "name": "Aidp.Playtest.Editor",
+  "rootNamespace": "Aidp.Playtest.Editor",
+  "references": [ "Aidp.Playtest.Runtime", "UnityEngine.TestRunner", "UnityEditor.TestRunner" ],
+  "includePlatforms": [ "Editor" ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [ "Newtonsoft.Json.dll" ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

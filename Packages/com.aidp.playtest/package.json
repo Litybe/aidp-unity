@@ -1,0 +1,23 @@
+{
+  "name": "com.aidp.playtest",
+  "displayName": "AIDP Playtest Driver",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Un agent joue au jeu par l'Input System (clavier et manette virtuels), lit l'etat par des sondes, evalue des assertions et rend un JSON. Compile gate et pont fichier pour le harness aidp.",
+  "keywords": ["playtest", "input system", "automation", "aidp"],
+  "author": { "name": "aidp" },
+  "dependencies": {
+    "com.unity.inputsystem": "1.11.0",
+    "com.unity.test-framework": "1.4.6",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.modules.screencapture": "1.0.0",
+    "com.unity.modules.imageconversion": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Game integration",
+      "description": "Une sonde, une commande et un scenario d'exemple a copier dans le jeu.",
+      "path": "Samples~/GameIntegration"
+    }
+  ]
+}
