@@ -16,7 +16,7 @@ namespace Aidp.Playtest.Editor
     public static class CompileGate
     {
         private const string StateKey = "Aidp.CompileGate.State";
-        private const double TimeoutSeconds = 170;
+        private const double TimeoutSeconds = 590;
         private const double StartGraceSeconds = 3;
         private const double ReloadGraceSeconds = 5;
         private const string PlayModeMessage = "editor is in play mode: exit play mode before compiling";
