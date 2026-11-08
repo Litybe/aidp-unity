@@ -71,6 +71,8 @@ Regression : `public class ScenarioPlayModeTests : PlaytestScenarioTestBase { }`
 
 Repro : menu `Tools/AIDP/Playtest/Start repro recording` en Play Mode, puis `Stop ... and save` : scenario JSON dans `.aidp/playtest/recordings/`.
 
+Editeur dedie aux tests : avec le fichier `.aidp/test-editor` dans le projet, l'editeur reste sur une scene sans fichier, pour qu'un changement de branche n'ouvre jamais la fenetre modale « Reload Scene ». Ne pas creer ce fichier dans un projet de dev : les scenes ouvertes y seraient refermees.
+
 ## Tests du package
 
 EditMode (parseur, evaluateur, registres, formats de resultats) et PlayMode (peripherique virtuel vu par une `InputAction`, scenarios) : Test Runner, ou batchmode `-runTests` sur un projet hote qui reference le package en `file:` et declare `"testables": ["com.aidp.playtest"]`.

@@ -49,6 +49,7 @@ namespace Aidp.Playtest.Editor
 
         private static void OnEditorLoaded()
         {
+            TestEditorScene.LeaveSceneFiles();
             string root = PlaytestPaths.ProjectRoot;
             BridgeState state = LoadState();
             if (state.CurrentId != null && !EditorApplication.isPlayingOrWillChangePlaymode)

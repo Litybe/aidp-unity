@@ -58,6 +58,7 @@ namespace Aidp.Playtest.Editor
             Subscribe();
             if (fresh)
             {
+                TestEditorScene.LeaveSceneFiles();
                 AssetDatabase.Refresh();
                 CompilationPipeline.RequestScriptCompilation();
             }
