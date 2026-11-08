@@ -87,5 +87,59 @@ namespace Aidp.Playtest.Tests
             Assert.IsFalse(KeyNames.IsValid("gamepad.nope"));
             Assert.IsFalse(KeyNames.IsValid("none"));
         }
+
+        [Test]
+        public void SpawnAndObjectProbeAreRegistered()
+        {
+            var registry = new PlaytestRegistry(new[] { typeof(SpawnCommand), typeof(ObjectProbe) });
+            CollectionAssert.Contains(registry.CommandNames, "spawn");
+            CollectionAssert.Contains(registry.ProbeNames, "object");
+            Assert.AreEqual(0, registry.Problems.Count);
+        }
+
+        [Test]
+        public void ObjectProbeReadsASceneObject()
+        {
+            var registry = new PlaytestRegistry(new[] { typeof(ObjectProbe) });
+            var go = new UnityEngine.GameObject("probeTarget");
+            go.transform.position = new UnityEngine.Vector3(4.5f, -2f, 0f);
+            try
+            {
+                SpawnedObjects.Add("probeTarget", go);
+                Assert.IsTrue(registry.TryRead("object", "probeTarget.x", out object x, out _));
+                Assert.AreEqual(4.5, (double)x, 0.001);
+                Assert.IsTrue(registry.TryRead("object", "probeTarget.y", out object y, out _));
+                Assert.AreEqual(-2.0, (double)y, 0.001);
+                Assert.IsTrue(registry.TryRead("object", "probeTarget.active", out object active, out _));
+                Assert.AreEqual(true, active);
+                Assert.IsTrue(registry.TryRead("object", "probeTarget.exists", out object exists, out _));
+                Assert.AreEqual(true, exists);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+                SpawnedObjects.DestroyAll();
+            }
+        }
+
+        [Test]
+        public void ObjectProbeReportsMissingObjects()
+        {
+            var registry = new PlaytestRegistry(new[] { typeof(ObjectProbe) });
+            Assert.IsTrue(registry.TryRead("object", "ghost.exists", out object exists, out _));
+            Assert.AreEqual(false, exists);
+            Assert.IsFalse(registry.TryRead("object", "ghost.x", out _, out string error));
+            StringAssert.Contains("not found", error);
+            Assert.IsFalse(registry.TryRead("object", "ghost", out _, out string shape));
+            StringAssert.Contains("expects", shape);
+        }
+
+        [Test]
+        public void SpawnWithoutPrefabArgumentThrows()
+        {
+            var registry = new PlaytestRegistry(new[] { typeof(SpawnCommand) });
+            Scenario s = ScenarioParser.Parse("{\"id\":\"a\",\"setup\":[{\"cmd\":\"spawn\",\"x\":1}]}");
+            Assert.Throws<PlaytestException>(() => registry.Execute(s.Setup[0]));
+        }
     }
 }

@@ -44,14 +44,17 @@ Appelee par `{ "cmd": "teleport", "x": 12, "y": 3 }` dans `setup` ou entre deux 
 ## Scenario
 
 ```json
-{ "id": "issue-214-ca2", "scene": "Assets/Scenes/Level_1.unity", "timeoutMs": 10000,
-  "setup": [ { "cmd": "teleport", "x": 12, "y": 3 } ],
+{ "id": "issue-214-ca2", "timeoutMs": 10000,
+  "setup": [ { "cmd": "spawn", "prefab": "Assets/Prefab/Lever.prefab", "x": 12, "y": 3, "name": "fixture1" }, { "cmd": "teleport", "x": 12, "y": 1 } ],
   "steps": [ { "hold": "rightArrow", "ms": 300 }, { "tap": "x" }, { "wait": 400 }, { "capture": "after-dash" } ],
   "assert": [ "player.x > 17.5", { "expr": "player.grounded == true", "withinMs": 500 }, "player.x ~= 17.5 ± 0.2" ] }
 ```
 
 - Steps : `hold` (touche ou liste, `ms`), `press` (enfoncee jusqu'a `release` ou la fin), `release`, `tap` (une frame), `wait` (ms), `capture` (nom), `cmd`. Touches : noms de `UnityEngine.InputSystem.Key` en camelCase ; manette `gamepad.buttonSouth`, `gamepad.dpadUp`, `gamepad.leftStick.left`, `gamepad.leftTrigger`.
-- Les ms sont du temps reel, independant de `Time.timeScale`. `timeoutMs` couvre tout le scenario.
+- Les ms sont du temps reel, independant de `Time.timeScale`. `timeoutMs` couvre le scenario a partir de la fin du chargement de la scene (chargement : 120 s max, a part).
+- Scene : champ `scene` (chemin `Assets/...unity`) ; **sans lui, le scenario joue dans `Assets/Tests/Playtest/Scenes/PlaytestArena.unity`** (`PlaytestOptions.DefaultScene`) si ce fichier existe, sinon dans la scene courante. Le jeu fournit l'arene (GameManager, joueur, camera, sol plat) : un scenario ne depend pas du contenu d'un niveau.
+- `spawn` (commande du package) : `{ "cmd":"spawn", "prefab":"Assets/.../X.prefab", "x":12, "y":3, "name":"fixture1", "active":true }` pose une instance (`name` defaut = nom du prefab, `z` et `active` optionnels ; prefab charge par `AssetDatabase`, donc Editor seulement). Les objets poses sont detruits a la fin du scenario.
+- Sonde `object` (package) : `object.<nom>.x`, `.y`, `.active`, `.exists` sur un objet pose par `spawn` ou present dans la scene (`GameObject.Find`) ; `exists` est faux sans erreur quand l'objet manque.
 - Assertions : `sonde.champ op valeur`, op `== != < <= > >= ~=` ; `withinMs` = vraie au moins une fois dans ce delai, compte a partir de la fin des steps.
 
 ## Portes pour le harness (fichiers sous `<projet>/.aidp/`)

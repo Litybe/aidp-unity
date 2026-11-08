@@ -43,7 +43,7 @@ namespace Aidp.Playtest.Tests
 
         private static IEnumerator Play(string json, PlaytestResult result)
         {
-            var runner = new PlaytestRunner(PlaytestRegistry.FromLoadedAssemblies(), new PlaytestOptions { ProjectRoot = PlaytestPaths.ProjectRoot });
+            var runner = new PlaytestRunner(PlaytestRegistry.FromLoadedAssemblies(), new PlaytestOptions { ProjectRoot = PlaytestPaths.ProjectRoot, DefaultScene = string.Empty });
             yield return runner.Run(ScenarioParser.Parse(json), result);
         }
 
@@ -105,6 +105,49 @@ namespace Aidp.Playtest.Tests
             yield return Play("{\"id\":\"pm-to\",\"timeoutMs\":200,\"steps\":[{\"wait\":5000}]}", result);
             Assert.IsFalse(result.Passed);
             StringAssert.Contains("timeout", result.Error);
+        }
+
+        [UnityTest]
+        public IEnumerator SpawnPlacesAPrefabReadsItAndCleansUp()
+        {
+#if UNITY_EDITOR
+            const string dir = "Assets/_AidpPlaytestTmp";
+            const string prefabPath = dir + "/Fixture.prefab";
+            if (!UnityEditor.AssetDatabase.IsValidFolder(dir))
+                UnityEditor.AssetDatabase.CreateFolder("Assets", "_AidpPlaytestTmp");
+            var template = new UnityEngine.GameObject("Fixture");
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(template, prefabPath);
+            UnityEngine.Object.DestroyImmediate(template);
+            try
+            {
+                var result = new PlaytestResult("pm-spawn");
+                const string json = "{\"id\":\"pm-spawn\",\"setup\":[{\"cmd\":\"spawn\",\"prefab\":\"" + prefabPath + "\",\"x\":12,\"y\":3,\"name\":\"fixture1\"},"
+                    + "{\"cmd\":\"spawn\",\"prefab\":\"" + prefabPath + "\",\"name\":\"hidden1\",\"active\":false}],"
+                    + "\"assert\":[\"object.fixture1.exists == true\",\"object.fixture1.x ~= 12 ± 0.01\",\"object.fixture1.y == 3\","
+                    + "\"object.hidden1.active == false\",\"object.nobody.exists == false\"]}";
+                yield return Play(json, result);
+                Assert.IsNull(result.Error);
+                Assert.IsTrue(result.Passed, result.Summary());
+                Assert.AreEqual(0, SpawnedObjects.Count);
+                yield return null;
+                Assert.IsNull(UnityEngine.GameObject.Find("fixture1"));
+            }
+            finally
+            {
+                UnityEditor.AssetDatabase.DeleteAsset(dir);
+            }
+#else
+            yield break;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator SpawnOfAMissingPrefabIsAnError()
+        {
+            var result = new PlaytestResult("pm-spawn-ko");
+            yield return Play("{\"id\":\"pm-spawn-ko\",\"setup\":[{\"cmd\":\"spawn\",\"prefab\":\"Assets/Nope.prefab\"}]}", result);
+            Assert.IsFalse(result.Passed);
+            StringAssert.Contains("no prefab", result.Error);
         }
     }
 }

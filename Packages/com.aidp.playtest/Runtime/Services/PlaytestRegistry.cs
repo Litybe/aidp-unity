@@ -50,7 +50,10 @@ namespace Aidp.Playtest
 
             try
             {
-                IReadOnlyDictionary<string, object> snapshot = GetProbe(probe).Read();
+                IPlaytestProbe instance = GetProbe(probe);
+                if (instance is IPlaytestFieldProbe fieldProbe)
+                    return fieldProbe.TryReadField(field, out value, out error);
+                IReadOnlyDictionary<string, object> snapshot = instance.Read();
                 if (snapshot == null)
                 {
                     error = "probe '" + probe + "' has no subject (not in scene yet?)";
@@ -140,9 +143,9 @@ namespace Aidp.Playtest
 
         private static bool ReferencesRuntime(Assembly assembly, string runtimeName)
         {
-            string self = assembly.GetName().Name;
-            if (self == runtimeName)
-                return false;
+            // Le runtime lui-meme declare la commande "spawn" et la sonde "object".
+            if (assembly.GetName().Name == runtimeName)
+                return true;
             try
             {
                 foreach (AssemblyName reference in assembly.GetReferencedAssemblies())

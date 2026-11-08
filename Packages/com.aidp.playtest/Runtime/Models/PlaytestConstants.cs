@@ -40,5 +40,11 @@ namespace Aidp.Playtest
         public const int GifMaxFrames = 240;
         public const double DefaultTolerance = 0.001;
         public const int SceneSettleFrames = 2;
+
+        /// <summary>Delai max du chargement de la scene (premier import a froid compris) ; hors timeoutMs du scenario.</summary>
+        public const int SceneLoadTimeoutMs = 120000;
+
+        /// <summary>Scene jouee par un scenario sans champ "scene" (si le fichier existe dans le projet).</summary>
+        public const string DefaultArenaScene = "Assets/Tests/Playtest/Scenes/PlaytestArena.unity";
     }
 }

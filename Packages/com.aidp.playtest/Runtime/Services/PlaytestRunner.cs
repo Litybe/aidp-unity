@@ -32,6 +32,9 @@ namespace Aidp.Playtest
             public Stopwatch Clock = Stopwatch.StartNew();
             public VirtualInput Input;
             public bool Aborted;
+
+            /// <summary>Instant (ms de l'horloge) ou le timeout du scenario commence : apres le chargement de la scene.</summary>
+            public long TimeoutOrigin;
         }
 
         /// <summary>
@@ -41,6 +44,7 @@ namespace Aidp.Playtest
         public IEnumerator Run(Scenario scenario, PlaytestResult result)
         {
             var state = new RunState { Scenario = scenario, Result = result };
+            SpawnedObjects.DestroyAll();
             using (var settings = new InputSettingsScope())
             {
                 float timeScale = Time.timeScale;
@@ -77,6 +81,7 @@ namespace Aidp.Playtest
 
                 if (state.Input != null)
                     state.Input.Dispose();
+                SpawnedObjects.DestroyAll();
                 Time.timeScale = timeScale;
             }
 
@@ -90,12 +95,15 @@ namespace Aidp.Playtest
             foreach (string problem in _registry.Problems)
                 s.Result.Log.Add("registry: " + problem);
 
-            if (!string.IsNullOrEmpty(s.Scenario.Scene))
+            string scene = ResolveScene(s.Scenario);
+            if (!string.IsNullOrEmpty(scene))
             {
-                yield return LoadScene(s);
+                yield return LoadScene(s, scene);
                 if (s.Aborted)
                     yield break;
             }
+
+            s.TimeoutOrigin = s.Clock.ElapsedMilliseconds;
 
             for (int i = 0; i < PlaytestConstants.SceneSettleFrames; i++)
                 yield return null;
@@ -114,9 +122,19 @@ namespace Aidp.Playtest
             yield return EvaluateAssertions(s);
         }
 
-        private static IEnumerator LoadScene(RunState s)
+        /// <summary>Scene du scenario ; sans champ "scene", l'arene par defaut si elle existe, sinon la scene courante (vide).</summary>
+        private string ResolveScene(Scenario scenario)
         {
-            string path = s.Scenario.Scene;
+            if (!string.IsNullOrEmpty(scenario.Scene))
+                return scenario.Scene;
+            string arena = _options.DefaultScene;
+            bool exists = !string.IsNullOrEmpty(arena) && !string.IsNullOrEmpty(_options.ProjectRoot)
+                && File.Exists(Path.Combine(_options.ProjectRoot, arena));
+            return exists ? arena : string.Empty;
+        }
+
+        private static IEnumerator LoadScene(RunState s, string path)
+        {
             s.Result.Log.Add(Stamp(s) + "load scene " + path);
 #if UNITY_EDITOR
             AsyncOperation op = UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters(LoadSceneMode.Single));
@@ -127,8 +145,13 @@ namespace Aidp.Playtest
                 throw new PlaytestException("cannot load scene '" + path + "'");
             while (!op.isDone)
             {
-                if (TimedOut(s))
+                if (s.Clock.ElapsedMilliseconds > PlaytestConstants.SceneLoadTimeoutMs)
+                {
+                    s.Result.Error = "scene '" + path + "' not loaded after " + PlaytestConstants.SceneLoadTimeoutMs + " ms";
+                    s.Aborted = true;
                     yield break;
+                }
+
                 yield return null;
             }
         }
@@ -262,7 +285,7 @@ namespace Aidp.Playtest
         {
             if (s.Aborted)
                 return true;
-            if (s.Clock.ElapsedMilliseconds <= s.Scenario.TimeoutMs)
+            if (s.Clock.ElapsedMilliseconds - s.TimeoutOrigin <= s.Scenario.TimeoutMs)
                 return false;
             s.Result.Error = "timeout after " + s.Scenario.TimeoutMs + " ms";
             s.Aborted = true;
