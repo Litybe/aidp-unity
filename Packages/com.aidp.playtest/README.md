@@ -2,12 +2,20 @@
 
 Un agent joue au jeu par l'Input System, sans captures d'ecran : clavier et manette virtuels, sondes d'etat, commandes de debug, scenarios JSON, assertions, et trois portes pour le harness aidp (compile, playtest, tests).
 
+> **Usage : manuel, dans l'editeur ouvert.** Depuis la decision du 2026-11-09, les pipelines aidp de la
+> route `code` ne jouent plus le jeu : ils verifient en headless (Unity en batchmode dans le worktree du
+> ticket, compile gate puis tests EditMode, voir [Batchmode](#batchmode-ce-que-les-pipelines-aidp-lancent)) et le
+> test PlayMode est fait a la main, a partir de la section « Test manuel en PlayMode » de la PR. Ce package
+> reste ton outil dans l'editeur : rejouer un scenario, enregistrer une repro, lancer les portes par le
+> pont fichier. Aucun stage ne depose plus de requete dans `.aidp/`.
+
 ## Installation
 
-Dans `Packages/manifest.json` du jeu :
+Dans `Packages/manifest.json` du jeu, un chemin relatif au dossier `Packages/` (ou une URL git), jamais un
+chemin absolu propre a une machine :
 
 ```json
-"com.aidp.playtest": "file:D:/AIDP/src/aidp-unity/Packages/com.aidp.playtest"
+"com.aidp.playtest": "file:../../aidp-unity/Packages/com.aidp.playtest"
 ```
 
 Dependances : `com.unity.inputsystem`, `com.unity.test-framework`, `com.unity.nuget.newtonsoft-json` (choisi pour lire les formes mixtes du schema : une assertion est une chaine ou un objet, un step a une cle d'action variable ; `JsonUtility` ne sait pas). Le runtime n'est compile que dans l'editeur et les builds de developpement (`UNITY_EDITOR || DEVELOPMENT_BUILD`) : entoure le code du jeu qui l'utilise du meme `#if`.
@@ -70,6 +78,23 @@ Les fichiers de demande sont pris par un `FileSystemWatcher` ; le traitement est
 Regression : `public class ScenarioPlayModeTests : PlaytestScenarioTestBase { }` dans un asmdef de tests PlayMode (references `Aidp.Playtest.Runtime`, `Aidp.Playtest.TestSupport`) : un test par fichier de `Assets/Tests/Playtest/Scenarios/`.
 
 Repro : menu `Tools/AIDP/Playtest/Start repro recording` en Play Mode, puis `Stop ... and save` : scenario JSON dans `.aidp/playtest/recordings/`.
+
+## Batchmode : ce que les pipelines aidp lancent
+
+Sans editeur ouvert, dans le worktree du ticket (`<projet>` ci-dessous), deux appels au plus par verification,
+jamais `-testPlatform PlayMode` :
+
+```
+Unity -batchmode -nographics -quit -projectPath "<projet>" -logFile "<stage>/unity-compile-<id>.log"
+Unity -batchmode -nographics -projectPath "<projet>" -runTests -testPlatform EditMode -testResults "<stage>/editmode-<id>.xml" -logFile "<stage>/unity-editmode-<id>.log"
+```
+
+Le premier compile (verdict : code de sortie 0 et aucun `error CS` dans le log), cree les `.meta` des nouveaux
+assets et quitte. Le second joue la suite EditMode (codes 0 tout passe, 2 echecs, 3 erreur d'execution) et ecrit
+un XML NUnit. Ce package n'intervient pas dans ces appels ; sa seule exigence est de compiler en batchmode (il le
+fait : le runtime est sous `UNITY_EDITOR || DEVELOPMENT_BUILD`). Un editeur deja ouvert sur le meme chemin fait
+echouer le batchmode (« Multiple Unity instances cannot open the same project ») : les pipelines ne le lancent
+que dans un worktree. Contrat complet : `templates/recipes/unity-verify.md` du skill.
 
 ## Tests du package
 
