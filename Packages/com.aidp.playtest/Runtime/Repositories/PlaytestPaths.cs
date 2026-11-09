@@ -27,6 +27,9 @@ namespace Aidp.Playtest
         public static string TestResultFile(string root, string id, string mode) =>
             Path.Combine(root, PlaytestConstants.AidpDirectory, PlaytestConstants.TestResultsDirectory, id + "-" + mode + PlaytestConstants.JsonExtension);
 
+        /// <summary>Battement de coeur de l'editeur (.aidp/editor/heartbeat.json), lu par le harness pour distinguer un editeur lent d'un editeur bloque.</summary>
+        public static string HeartbeatFile(string root) => Path.Combine(root, PlaytestConstants.AidpDirectory, PlaytestConstants.EditorDirectory, PlaytestConstants.HeartbeatFile);
+
         public static string RecordingsDir(string root) => Combine(root, PlaytestConstants.PlaytestDirectory, PlaytestConstants.RecordingsDirectory);
 
         public static string PlaytestRequestFile(string root, string id) => Path.Combine(PlaytestRequestsDir(root), id + PlaytestConstants.JsonExtension);
