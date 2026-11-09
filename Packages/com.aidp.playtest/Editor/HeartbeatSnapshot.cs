@@ -60,7 +60,7 @@ namespace Aidp.Playtest.Editor
                 ["state"] = State,
                 ["activeScene"] = ActiveScene,
                 ["dirty"] = Dirty,
-                ["playtest"] = Playtest,
+                ["playtest"] = NullableText(Playtest),
                 ["compileFailed"] = CompileFailed,
                 ["staleAfterSeconds"] = StaleAfterSeconds,
                 ["lastError"] = LastError == null ? null : new JObject { ["message"] = LastError.Message, ["at"] = LastError.At },
@@ -69,12 +69,21 @@ namespace Aidp.Playtest.Editor
             return json;
         }
 
+        /// <summary>
+        /// Un texte absent est un vrai JSON null (JTokenType.Null) : la conversion implicite string vers JToken
+        /// fabrique sinon un JValue de type String portant null.
+        /// </summary>
+        private static JToken NullableText(string value)
+        {
+            return value == null ? JValue.CreateNull() : new JValue(value);
+        }
+
         private static JObject GuardJson(EditorGuardReport report)
         {
             var steps = new JArray();
             foreach (string step in report.Steps ?? new List<string>())
                 steps.Add(step);
-            return new JObject { ["at"] = report.At, ["steps"] = steps, ["skipped"] = report.Skipped, ["activeScene"] = report.ActiveScene };
+            return new JObject { ["at"] = report.At, ["steps"] = steps, ["skipped"] = NullableText(report.Skipped), ["activeScene"] = report.ActiveScene };
         }
     }
 
