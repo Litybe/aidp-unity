@@ -35,12 +35,21 @@ namespace Aidp.Playtest.Editor
             public string Id { get; set; }
             public string Mode { get; set; }
             public long StartedUtcTicks { get; set; }
+            public bool Started { get; set; }
         }
 
         static TestGate()
         {
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             api.RegisterCallbacks(new Callbacks());
+            // Une demande deposee juste avant un domain reload (refresh de la garde) n'a pas encore lance ses tests : on la reprend,
+            // de meme qu'une demande arrivee pendant un Play Mode (scenario en cours), des le retour en mode edition.
+            EditorApplication.delayCall += StartPending;
+            EditorApplication.playModeStateChanged += change =>
+            {
+                if (change == PlayModeStateChange.EnteredEditMode)
+                    EditorApplication.delayCall += StartPending;
+            };
         }
 
         public static bool TryParseMode(string text, out string mode)
@@ -66,6 +75,37 @@ namespace Aidp.Playtest.Editor
                 File.Delete(stale);
 
             EditorSessionJson.Save(StateKey, new Pending { Id = requestId, Mode = canonical, StartedUtcTicks = DateTime.UtcNow.Ticks });
+            StartPending();
+        }
+
+        /// <summary>
+        /// Lance la demande en attente une fois l'editeur neutre et disponible : garde (scenes, refresh), puis TestRunnerApi.
+        /// Pendant une compilation ou un import, reessaie a la frame suivante ; apres un domain reload, le constructeur rappelle.
+        /// </summary>
+        private static void StartPending()
+        {
+            Pending pending = EditorSessionJson.Load<Pending>(StateKey);
+            if (pending == null || pending.Started)
+                return;
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += StartPending;
+                return;
+            }
+
+            EditorGuard.Prepare();
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += StartPending;
+                return;
+            }
+
+            pending.Started = true;
+            EditorSessionJson.Save(StateKey, pending);
+            string requestId = pending.Id;
+            string canonical = pending.Mode;
             TestMode testMode = canonical == EditMode ? TestMode.EditMode : TestMode.PlayMode;
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             api.RetrieveTestList(testMode, root =>

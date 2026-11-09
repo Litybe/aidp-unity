@@ -10,6 +10,8 @@ namespace Aidp.Playtest
         public const string ResultsDirectory = "results";
         public const string TestResultsDirectory = "test-results";
         public const string RecordingsDirectory = "recordings";
+        public const string EditorDirectory = "editor";
+        public const string HeartbeatFile = "heartbeat.json";
         public const string FramesDirectory = "frames";
         public const string JsonExtension = ".json";
         public const string PngExtension = ".png";

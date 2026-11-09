@@ -156,9 +156,13 @@ namespace Aidp.Playtest.Editor
                 File.Delete(result);
         }
 
+        /// <summary>L'id du scenario en cours de lecture, ou null (lu par le heartbeat).</summary>
+        public static string CurrentScenarioId() => LoadState().CurrentId;
+
         /// <summary>Lance le prochain scenario de la file s'il n'y en a pas en cours.</summary>
         private static void Pump()
         {
+            bool guarded = false;
             while (true)
             {
                 BridgeState state = LoadState();
@@ -169,6 +173,19 @@ namespace Aidp.Playtest.Editor
                     // Reessai unique a la fin de la compilation (voir l'abonnement du constructeur) ou de l'import.
                     EditorApplication.delayCall += Pump;
                     return;
+                }
+
+                if (!guarded && !EditorApplication.isPlayingOrWillChangePlaymode)
+                {
+                    // Etat neutre avant d'entrer en Play Mode : scenes sales reglees, scene d'edition ouverte, assets a jour.
+                    // Si le refresh declenche une compilation, on reprend a sa fin (le scenario est toujours en file).
+                    guarded = true;
+                    EditorGuard.Prepare();
+                    if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+                    {
+                        EditorApplication.delayCall += Pump;
+                        return;
+                    }
                 }
 
                 string id = state.Queue[0];
