@@ -65,13 +65,38 @@ Appelee par `{ "cmd": "teleport", "x": 12, "y": 3 }` dans `setup` ou entre deux 
 | Playtest (C2) | `Aidp.Playtest.Editor.PlaytestBridge.Run("<id>")` | `playtest/requests/<id>.json` (schema scenario) | `playtest/results/<id>.json`, captures, `gif` si `D:\DevTools\ffmpeg\bin\ffmpeg.exe` (ou `AIDP_FFMPEG`) existe |
 | Test gate (C8) | `Aidp.Playtest.Editor.TestGate.Request("<id>", "EditMode"\|"PlayMode")` | `test-results/requests/<id>-<mode>.json` | `test-results/<id>-<mode>.json` |
 
-Les fichiers de demande sont pris par un `FileSystemWatcher` ; le traitement est poste sur le thread principal. Aucun abonnement permanent a `EditorApplication.update` : cout CPU nul au repos. L'etat survit au domain reload (`SessionState`). Un scenario est refuse si l'editeur est deja en Play Mode.
+Les fichiers de demande sont pris par un `FileSystemWatcher` ; le traitement est poste sur le thread principal. Hors heartbeat (ci-dessous), aucun abonnement permanent a `EditorApplication.update`. L'etat survit au domain reload (`SessionState`). Un scenario est refuse si l'editeur est deja en Play Mode ; une demande de tests arrivee pendant un Play Mode part au retour en mode edition.
+
+## Garde d'editeur (zero intervention humaine)
+
+Avant chaque porte, `Aidp.Playtest.Editor.EditorGuard.Prepare()` met l'editeur dans un etat neutre, par des appels scriptes qui n'ouvrent jamais de boite de dialogue :
+
+1. scenes sales : rechargees depuis le disque (`DirtyScenes = Discard`, defaut), sauvegardees (`Save`) ou laissees (`Ignore`) ;
+2. scene d'edition : `EditScene` (defaut `Assets/Tests/Playtest/Scenes/PlaytestArena.unity`, si le fichier existe) est ouverte seule en mode edition. Un `git checkout` ne modifie donc jamais le fichier de la scene ouverte et aucun `Level_*` ne reste charge dans l'editeur de test. Vide : la scene ouverte est laissee ;
+3. `AssetDatabase.Refresh()` : ce que le harness a ecrit pendant que la fenetre n'avait pas le focus est importe avant de jouer (pas seulement a la compile gate). Si le refresh declenche une compilation, la demande reprend a la fin du domain reload.
+
+Reglages dans `ProjectSettings/AidpPlaytest.asset` (`Tools/AIDP/Playtest/Settings`, versionne). Menu `Tools/AIDP/Playtest/Prepare editor now` pour l'appliquer a la main. Les niveaux se testent toujours via `spawn` dans l'arene, jamais en ouvrant un `Level_*`.
+
+## Preferences editeur figees
+
+Au chargement (`ApplyEditorPreferences`, defaut vrai), `EditorPreferencesBootstrap` ecrit les preferences utilisateur qui evitent les interruptions : *Script Changes While Playing* = *Recompile After Finished Playing* (un `.cs` ecrit pendant un scenario ne casse plus la partie), *Auto Refresh* actif, *Directory Monitoring* actif. Option `DisableDomainReload` : active *Enter Play Mode Options* sans domain reload (entree en Play Mode quasi instantanee) ; a reserver a un jeu qui remet ses statiques a zero (`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]`). Menu `Tools/AIDP/Playtest/Apply editor preferences`.
+
+## Heartbeat
+
+`EditorHeartbeat` ecrit `.aidp/editor/heartbeat.json` toutes les 2 s (`Heartbeat`, defaut vrai), une derniere fois juste avant un domain reload (`state: reloading`) et a la fermeture (`quitting`) :
+
+```json
+{ "at": "2026-11-09T10:00:02.120Z", "pid": 4242, "unityVersion": "6000.0.1f1", "projectRoot": "D:/Game",
+  "state": "idle | compiling | importing | compile-failed | entering-play | playing | paused | reloading | quitting",
+  "activeScene": "Assets/Tests/Playtest/Scenes/PlaytestArena.unity", "dirty": false, "playtest": null, "compileFailed": false,
+  "staleAfterSeconds": 15, "lastError": { "message": "...", "at": "..." }, "lastGuard": { "at": "...", "steps": ["OpenEditScene", "RefreshAssets"], "skipped": null, "activeScene": "..." } }
+```
+
+Lecture par le harness : `at` plus vieux que `staleAfterSeconds` avec un process Unity vivant et un etat autre que `reloading` = thread principal bloque (boite de dialogue, gel) : a rapporter tel quel plutot que d'attendre un timeout de 600 s. Le gateway le renvoie dans `GET /api/unity/status` (`editor.heartbeat`).
 
 Regression : `public class ScenarioPlayModeTests : PlaytestScenarioTestBase { }` dans un asmdef de tests PlayMode (references `Aidp.Playtest.Runtime`, `Aidp.Playtest.TestSupport`) : un test par fichier de `Assets/Tests/Playtest/Scenarios/`.
 
 Repro : menu `Tools/AIDP/Playtest/Start repro recording` en Play Mode, puis `Stop ... and save` : scenario JSON dans `.aidp/playtest/recordings/`.
-
-Editeur dedie aux tests : avec le fichier `.aidp/test-editor` dans le projet, l'editeur reste sur une scene sans fichier, pour qu'un changement de branche n'ouvre jamais la fenetre modale « Reload Scene ». Ne pas creer ce fichier dans un projet de dev : les scenes ouvertes y seraient refermees.
 
 ## Tests du package
 

@@ -58,7 +58,8 @@ namespace Aidp.Playtest.Editor
             Subscribe();
             if (fresh)
             {
-                TestEditorScene.LeaveSceneFiles();
+                // Scenes sales reglees avant le refresh : un checkout qui a reecrit la scene ouverte ne provoque aucune boite de dialogue.
+                EditorGuard.Prepare(refresh: false);
                 AssetDatabase.Refresh();
                 CompilationPipeline.RequestScriptCompilation();
             }
